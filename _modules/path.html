@@ -1,0 +1,935 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>path &mdash; mynbou 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> mynbou
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../intro.html">Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">mynbou</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Module code</a> &raquo;</li>
+        
+      <li>path</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for path</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains the main pathing classes of mynbou.</span>
+
+<span class="sd">OntdekBaan which discovers every path on a DAG from one node until it reaches a break condition or all nodes are visited.</span>
+<span class="sd">Volg which traverses backwards from the selected release to collect change metrics</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">deque</span>
+
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">from</span> <span class="nn">Levenshtein</span> <span class="kn">import</span> <span class="n">distance</span>
+<span class="kn">from</span> <span class="nn">dateutil.relativedelta</span> <span class="kn">import</span> <span class="n">relativedelta</span>
+
+<span class="kn">from</span> <span class="nn">pycoshark.mongomodels</span> <span class="kn">import</span> <span class="n">Commit</span><span class="p">,</span> <span class="n">CodeEntityState</span><span class="p">,</span> <span class="n">FileAction</span><span class="p">,</span> <span class="n">File</span><span class="p">,</span> <span class="n">Issue</span><span class="p">,</span> <span class="n">Hunk</span><span class="p">,</span> <span class="n">Refactoring</span><span class="p">,</span> <span class="n">CommitChanges</span>
+<span class="kn">from</span> <span class="nn">pycoshark.utils</span> <span class="kn">import</span> <span class="n">java_filename_filter</span><span class="p">,</span> <span class="n">jira_is_resolved_and_fixed</span><span class="p">,</span> <span class="n">get_commit_graph</span><span class="p">,</span> <span class="n">heuristic_renames</span>
+
+<span class="kn">from</span> <span class="nn">bson.objectid</span> <span class="kn">import</span> <span class="n">ObjectId</span>
+<span class="kn">from</span> <span class="nn">mynbou.constants</span> <span class="kn">import</span> <span class="o">*</span>
+
+
+<div class="viewcode-block" id="OntdekBaan"><a class="viewcode-back" href="../api.html#path.OntdekBaan">[docs]</a><span class="k">class</span> <span class="nc">OntdekBaan</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Simple variant of OntdekBaan which yields the paths via bfs until a break condition is hit or no unvisited nodes remain.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span> <span class="o">=</span> <span class="n">g</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_nodes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_bfs_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">predecessors</span><span class="p">,</span> <span class="n">break_condition</span><span class="p">):</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="p">[</span><span class="n">source</span><span class="p">]}</span>
+        <span class="n">visited</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">source</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Commit </span><span class="si">{}</span><span class="s1"> is not contained in the commit graph&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">source</span><span class="p">))</span>
+
+        <span class="n">queue</span> <span class="o">=</span> <span class="n">deque</span><span class="p">([(</span><span class="n">source</span><span class="p">,</span> <span class="n">predecessors</span><span class="p">(</span><span class="n">source</span><span class="p">))])</span>
+        <span class="k">while</span> <span class="n">queue</span><span class="p">:</span>
+            <span class="n">parent</span><span class="p">,</span> <span class="n">children</span> <span class="o">=</span> <span class="n">queue</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># iterate over children list</span>
+                <span class="n">child</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">children</span><span class="p">)</span>
+
+                <span class="c1"># we keep track of visited pairs so that we do not have common suffixes</span>
+                <span class="k">if</span> <span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="n">child</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">visited</span><span class="p">:</span>
+
+                    <span class="n">break_child</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">if</span> <span class="n">break_condition</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">break_condition</span><span class="p">(</span><span class="n">child</span><span class="p">):</span>
+                        <span class="n">break_child</span> <span class="o">=</span> <span class="kc">True</span>
+
+                    <span class="c1"># find path which last node is parent, append first child</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">break_child</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">path_num</span><span class="p">,</span> <span class="n">nodes</span> <span class="ow">in</span> <span class="n">paths</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                            <span class="k">if</span> <span class="n">parent</span> <span class="o">==</span> <span class="n">nodes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]:</span>
+                                <span class="n">paths</span><span class="p">[</span><span class="n">path_num</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+                                <span class="k">break</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">paths</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">paths</span><span class="p">)]</span> <span class="o">=</span> <span class="p">[</span><span class="n">parent</span><span class="p">,</span> <span class="n">child</span><span class="p">]</span>
+
+                    <span class="n">visited</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">parent</span><span class="p">,</span> <span class="n">child</span><span class="p">))</span>
+
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">break_child</span><span class="p">:</span>
+                        <span class="n">queue</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">child</span><span class="p">,</span> <span class="n">predecessors</span><span class="p">(</span><span class="n">child</span><span class="p">)))</span>
+
+            <span class="c1"># every child iterated</span>
+            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+                <span class="n">queue</span><span class="o">.</span><span class="n">popleft</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">paths</span>
+
+<div class="viewcode-block" id="OntdekBaan.set_path"><a class="viewcode-back" href="../api.html#path.OntdekBaan.set_path">[docs]</a>    <span class="k">def</span> <span class="nf">set_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s1">&#39;backward&#39;</span><span class="p">,</span> <span class="n">break_condition</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set start node and travel direction for the BFS.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_start</span> <span class="o">=</span> <span class="n">start</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_direction</span> <span class="o">=</span> <span class="n">direction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_break_condition</span> <span class="o">=</span> <span class="n">break_condition</span></div>
+
+<div class="viewcode-block" id="OntdekBaan.all_paths"><a class="viewcode-back" href="../api.html#path.OntdekBaan.all_paths">[docs]</a>    <span class="k">def</span> <span class="nf">all_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generator that yields all possible paths fomr the given start node and the direction.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_direction</span> <span class="o">==</span> <span class="s1">&#39;backward&#39;</span><span class="p">:</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bfs_paths</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">predecessors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_break_condition</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">path_num</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">yield</span> <span class="n">path</span>
+
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_direction</span> <span class="o">==</span> <span class="s1">&#39;forward&#39;</span><span class="p">:</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bfs_paths</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="o">.</span><span class="n">successors</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_break_condition</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">path_num</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">paths</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">yield</span> <span class="n">path</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;no such direction: </span><span class="si">{}</span><span class="s1">, please use backward or forward&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_direction</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="Volg"><a class="viewcode-back" href="../api.html#path.Volg">[docs]</a><span class="k">class</span> <span class="nc">Volg</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Volg follows file renaming within git.</span>
+
+<span class="sd">    It takes a target release and tracks the files contained in the target release backwards.</span>
+<span class="sd">    If we encounter a rename we add the old name of the file to the aliases of the filename we know, this allows us to keep track of these files.</span>
+<span class="sd">    If we encounter a copy operation we do not add the old name of the file to the aliases because that file contiues to exist and we would then mix them up.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">vcs</span><span class="p">,</span> <span class="n">target_release_hash</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+
+        <span class="c1"># the metrics that are collected for each file</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_metrics</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;change_types&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;bug_fixes&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;authors&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;revisions&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;lines_added&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;lines_deleted&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;changesets&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;ages&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;aliases&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;linked_issues&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;commit_messages&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;days_from_release&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;refactorings&#39;</span><span class="p">:</span> <span class="p">[]}</span>
+
+        <span class="c1"># global cache of expensive first occurence calculation for files</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_first_occurences</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># all files in target release</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_release_files</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># we need the graph to traverse it</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_graph</span> <span class="o">=</span> <span class="n">graph</span>
+
+        <span class="c1"># change metrics we collect</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_target_release_hash</span> <span class="o">=</span> <span class="n">target_release_hash</span>
+
+        <span class="c1"># all paths back to origin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_origin_paths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_origin_paths</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">target_release_hash</span><span class="p">)</span>
+
+        <span class="c1"># all paths back to origin for 6 months</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_paths</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_paths</span><span class="p">(</span><span class="n">vcs</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">target_release_hash</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span> <span class="o">=</span> <span class="n">vcs</span>
+
+        <span class="c1"># get release files</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">revision_hash</span><span class="o">=</span><span class="n">target_release_hash</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ces</span> <span class="ow">in</span> <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__in</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">code_entity_states</span><span class="p">,</span> <span class="n">ce_type</span><span class="o">=</span><span class="s1">&#39;file&#39;</span><span class="p">,</span> <span class="n">long_name__endswith</span><span class="o">=</span><span class="s1">&#39;.java&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">java_filename_filter</span><span class="p">(</span><span class="n">ces</span><span class="o">.</span><span class="n">long_name</span><span class="p">,</span> <span class="n">production_only</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_release_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ces</span><span class="o">.</span><span class="n">long_name</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">ces</span><span class="o">.</span><span class="n">long_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_metrics</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_release_commit</span> <span class="o">=</span> <span class="n">c</span>
+
+        <span class="c1"># and release date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">committer_date</span>
+
+        <span class="c1"># used to track static metric deltas to construct dambros delta matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_metrics_used</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;wmc&#39;</span><span class="p">,</span> <span class="s1">&#39;dit&#39;</span><span class="p">,</span> <span class="s1">&#39;rfc&#39;</span><span class="p">,</span> <span class="s1">&#39;noc&#39;</span><span class="p">,</span> <span class="s1">&#39;cbo&#39;</span><span class="p">,</span> <span class="s1">&#39;lcom5&#39;</span><span class="p">,</span> <span class="s1">&#39;nii&#39;</span><span class="p">,</span> <span class="s1">&#39;noi&#39;</span><span class="p">,</span> <span class="s1">&#39;tna&#39;</span><span class="p">,</span> <span class="s1">&#39;tnpa&#39;</span><span class="p">,</span> <span class="s1">&#39;tna-tnpa&#39;</span><span class="p">,</span> <span class="s1">&#39;tna-tnla&#39;</span><span class="p">,</span> <span class="s1">&#39;tloc&#39;</span><span class="p">,</span> <span class="s1">&#39;tnm&#39;</span><span class="p">,</span> <span class="s1">&#39;tnlpm&#39;</span><span class="p">,</span> <span class="s1">&#39;tnm-tnpm&#39;</span><span class="p">,</span> <span class="s1">&#39;tnm-tnlm&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_window_size_days</span> <span class="o">=</span> <span class="mi">14</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_last_date</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span> <span class="o">+</span> <span class="n">relativedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dambros_window_size_days</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># get first occurences of release files</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_first_occurences</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_name_changes</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">first_occured</span><span class="p">(</span><span class="n">vcs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_origin_paths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_files</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_origin_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">target_release_hash</span><span class="p">):</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="n">OntdekBaan</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">set_path</span><span class="p">(</span><span class="n">target_release_hash</span><span class="p">,</span> <span class="s1">&#39;backward&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">all_paths</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">_change_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vcs</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">target_release_hash</span><span class="p">):</span>
+        <span class="n">target_release</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">revision_hash</span><span class="o">=</span><span class="n">target_release_hash</span><span class="p">)</span>
+        <span class="n">previous1</span> <span class="o">=</span> <span class="n">target_release</span><span class="o">.</span><span class="n">committer_date</span> <span class="o">-</span> <span class="n">relativedelta</span><span class="p">(</span><span class="n">months</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">break_condition</span><span class="p">(</span><span class="n">commit</span><span class="p">):</span>
+            <span class="n">tr</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">revision_hash</span><span class="o">=</span><span class="n">commit</span><span class="p">,</span> <span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">tr</span><span class="o">.</span><span class="n">committer_date</span> <span class="o">&lt;</span> <span class="n">previous1</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="n">OntdekBaan</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">set_path</span><span class="p">(</span><span class="n">target_release_hash</span><span class="p">,</span> <span class="s1">&#39;backward&#39;</span><span class="p">,</span> <span class="n">break_condition</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">all_paths</span><span class="p">())</span>
+
+<div class="viewcode-block" id="Volg.calc_current_files"><a class="viewcode-back" href="../api.html#path.Volg.calc_current_files">[docs]</a>    <span class="k">def</span> <span class="nf">calc_current_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">,</span> <span class="n">release_commit</span><span class="p">,</span> <span class="n">commit_graph</span><span class="p">,</span> <span class="n">undirected_graph</span><span class="p">,</span> <span class="n">rename_cache</span><span class="p">,</span> <span class="n">current_files</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;determines the java files changed by a commit and returns them as a set&quot;&quot;&quot;</span>
+        <span class="n">path_valid</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">current_files_start</span> <span class="o">=</span> <span class="n">current_files</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">shortest_paths</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">all_shortest_paths</span><span class="p">(</span><span class="n">undirected_graph</span><span class="p">,</span> <span class="n">release_commit</span><span class="o">.</span><span class="n">revision_hash</span><span class="p">,</span> <span class="n">commit</span><span class="o">.</span><span class="n">revision_hash</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">nx</span><span class="o">.</span><span class="n">NetworkXNoPath</span><span class="p">:</span>
+            <span class="n">shortest_paths</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">shortest_paths</span><span class="p">:</span>
+            <span class="c1"># path = nx.shortest_path(undirected_graph, release_commit.revision_hash, commit.revision_hash)</span>
+            <span class="n">current_files</span> <span class="o">=</span> <span class="n">current_files_start</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">path_valid</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">had_backward_edge</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span> <span class="c1"># going backwards</span>
+                <span class="k">if</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">commit_graph</span><span class="o">.</span><span class="n">pred</span><span class="p">[</span><span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">]]:</span>
+                    <span class="k">if</span> <span class="n">had_backward_edge</span><span class="p">:</span>
+                        <span class="c1"># invalid change of direction</span>
+                        <span class="n">path_valid</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="k">break</span>
+                    <span class="k">if</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="n">rename_cache</span><span class="p">:</span>
+                        <span class="n">renames</span> <span class="o">=</span> <span class="n">rename_cache</span><span class="p">[</span><span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">renames</span> <span class="o">=</span> <span class="n">heuristic_renames</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+                        <span class="n">rename_cache</span><span class="p">[</span><span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">renames</span>
+                    <span class="k">if</span> <span class="n">renames</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">rename</span> <span class="ow">in</span> <span class="n">renames</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                            <span class="k">if</span> <span class="n">rename</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">current_files</span><span class="p">:</span>
+                                <span class="n">current_files</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">rename</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                                <span class="n">current_files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rename</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                        <span class="k">for</span> <span class="n">deletion</span> <span class="ow">in</span> <span class="n">renames</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                            <span class="n">current_files</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">deletion</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">commit_graph</span><span class="o">.</span><span class="n">succ</span><span class="p">[</span><span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="p">]]:</span>
+                    <span class="n">had_backward_edge</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">if</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">rename_cache</span><span class="p">:</span>
+                        <span class="n">renames</span> <span class="o">=</span> <span class="n">rename_cache</span><span class="p">[</span><span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">renames</span> <span class="o">=</span> <span class="n">heuristic_renames</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                        <span class="n">rename_cache</span><span class="p">[</span><span class="n">path</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">renames</span>
+                    <span class="k">if</span> <span class="n">renames</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">rename</span> <span class="ow">in</span> <span class="n">renames</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                            <span class="k">if</span> <span class="n">rename</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">current_files</span><span class="p">:</span>
+                                <span class="n">current_files</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">rename</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                                <span class="n">current_files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">rename</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">path_valid</span><span class="p">:</span>
+                <span class="k">break</span>
+        <span class="k">return</span> <span class="n">current_files</span><span class="p">,</span> <span class="n">path_valid</span></div>
+
+<div class="viewcode-block" id="Volg.issues_six_months_szz"><a class="viewcode-back" href="../api.html#path.Volg.issues_six_months_szz">[docs]</a>    <span class="k">def</span> <span class="nf">issues_six_months_szz</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;basically looks six months into the future from the release and counts the defects that we can match</span>
+
+<span class="sd">        returns a dict, {filename: [list of issues]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        
+        <span class="n">files_release</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_files</span>
+
+        <span class="n">commit_graph</span> <span class="o">=</span> <span class="n">get_commit_graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">undirected_graph</span> <span class="o">=</span> <span class="n">commit_graph</span><span class="o">.</span><span class="n">to_undirected</span><span class="p">(</span><span class="n">as_view</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">rename_cache</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">delete_cache</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">all_fixed_issues</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">six_months</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span> <span class="o">+</span> <span class="n">relativedelta</span><span class="p">(</span><span class="n">months</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">commit</span> <span class="ow">in</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">committer_date__gt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span><span class="p">,</span> <span class="n">committer_date__lt</span><span class="o">=</span><span class="n">six_months</span><span class="p">,</span> <span class="n">labels__adjustedszz_bugfix</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">szz_issue_ids__0__exists</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;committer_date&#39;</span><span class="p">,</span> <span class="s1">&#39;szz_issue_ids&#39;</span><span class="p">,</span> <span class="s1">&#39;revision_hash&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">timeout</span><span class="p">(</span><span class="kc">False</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">Issue</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__in</span><span class="o">=</span><span class="n">commit</span><span class="o">.</span><span class="n">szz_issue_ids</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">issue_type</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;bug&quot;</span> <span class="ow">and</span> <span class="n">jira_is_resolved_and_fixed</span><span class="p">(</span><span class="n">issue</span><span class="p">):</span>
+                    <span class="n">all_fixed_issues</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">issue</span><span class="p">)</span>
+
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">{</span><span class="n">rfile</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">rfile</span> <span class="ow">in</span> <span class="n">files_release</span><span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">all_fixed_issues</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">bugfix_commit</span> <span class="ow">in</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">labels__adjustedszz_bugfix</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">szz_issue_ids</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">committer_date__gt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span><span class="p">,</span> <span class="n">committer_date__lt</span><span class="o">=</span><span class="n">six_months</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;revision_hash&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;szz_issue_ids&#39;</span><span class="p">,</span> <span class="s1">&#39;committer_date&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">timeout</span><span class="p">(</span><span class="kc">False</span><span class="p">):</span>
+                
+                <span class="c1"># in comparison to issues_six_months_szzr() we skip the inducing step and just use every bugfix commit within 6 months window</span>
+                <span class="n">changed_files</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">fa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">bugfix_commit</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;M&#39;</span><span class="p">):</span>
+
+                    <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fa</span><span class="o">.</span><span class="n">file_id</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">changed_files</span> <span class="ow">and</span> <span class="n">java_filename_filter</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">):</span>
+                        <span class="n">changed_files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+                <span class="n">current_files</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">current_files</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">current_files</span><span class="p">,</span> <span class="n">path_valid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_current_files</span><span class="p">(</span><span class="n">bugfix_commit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_commit</span><span class="p">,</span> <span class="n">commit_graph</span><span class="p">,</span> <span class="n">undirected_graph</span><span class="p">,</span> <span class="n">rename_cache</span><span class="p">,</span> <span class="n">changed_files</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">path_valid</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_files</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">files_release</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">current_files</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ret</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                                <span class="n">inf</span> <span class="o">=</span> <span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">external_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">bugfix_commit</span><span class="o">.</span><span class="n">committer_date</span><span class="p">),</span> <span class="n">bugfix_commit</span><span class="o">.</span><span class="n">revision_hash</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">priority</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">issue_type</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">created_at</span><span class="p">))</span>
+
+                                <span class="k">if</span> <span class="n">inf</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ret</span><span class="p">[</span><span class="n">f</span><span class="p">]:</span>
+                                    <span class="n">ret</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inf</span><span class="p">)</span>
+
+        <span class="c1"># todo</span>
+        <span class="c1"># for all files changed in a bugfixing commit find the corresponding names of the file in the release and count those</span>
+        <span class="c1"># bugs toward the file name</span>
+        <span class="k">return</span> <span class="n">ret</span></div>
+
+<div class="viewcode-block" id="Volg.issues_six_months_szzr"><a class="viewcode-back" href="../api.html#path.Volg.issues_six_months_szzr">[docs]</a>    <span class="k">def</span> <span class="nf">issues_six_months_szzr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;basically looks six months into the future from the release and counts the defects that we can match</span>
+
+<span class="sd">        returns a dict, {filename: [list of issues]}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        
+        <span class="n">files_release</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_files</span>
+
+        <span class="n">commit_graph</span> <span class="o">=</span> <span class="n">get_commit_graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">undirected_graph</span> <span class="o">=</span> <span class="n">commit_graph</span><span class="o">.</span><span class="n">to_undirected</span><span class="p">(</span><span class="n">as_view</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">rename_cache</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">delete_cache</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">all_fixed_issues</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">six_months</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span> <span class="o">+</span> <span class="n">relativedelta</span><span class="p">(</span><span class="n">months</span><span class="o">=</span><span class="mi">6</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">commit</span> <span class="ow">in</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">committer_date__gt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span><span class="p">,</span> <span class="n">committer_date__lt</span><span class="o">=</span><span class="n">six_months</span><span class="p">,</span> <span class="n">labels__issueonly_bugfix</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">linked_issue_ids__0__exists</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;committer_date&#39;</span><span class="p">,</span> <span class="s1">&#39;linked_issue_ids&#39;</span><span class="p">,</span> <span class="s1">&#39;revision_hash&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">timeout</span><span class="p">(</span><span class="kc">False</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">Issue</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__in</span><span class="o">=</span><span class="n">commit</span><span class="o">.</span><span class="n">linked_issue_ids</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">issue_type</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;bug&quot;</span> <span class="ow">and</span> <span class="n">jira_is_resolved_and_fixed</span><span class="p">(</span><span class="n">issue</span><span class="p">):</span>
+                    <span class="n">all_fixed_issues</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">issue</span><span class="p">)</span>
+
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">{</span><span class="n">rfile</span><span class="p">:</span> <span class="p">[]</span> <span class="k">for</span> <span class="n">rfile</span> <span class="ow">in</span> <span class="n">files_release</span><span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">all_fixed_issues</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">bugfix_commit</span> <span class="ow">in</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">linked_issue_ids</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">committer_date__gt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span><span class="p">,</span> <span class="n">labels__issueonly_bugfix</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">committer_date__lt</span><span class="o">=</span><span class="n">six_months</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;revision_hash&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;linked_issue_ids&#39;</span><span class="p">,</span> <span class="s1">&#39;committer_date&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">timeout</span><span class="p">(</span><span class="kc">False</span><span class="p">):</span>
+                
+                <span class="c1"># calculate if there are any inducings for this fa with the specific label</span>
+                <span class="c1"># if yes then we consider it?</span>
+
+                <span class="n">changed_files</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">fa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">bugfix_commit</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;M&#39;</span><span class="p">):</span>
+
+                    <span class="c1"># check if we find at least one inducing to this fa</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">induces__match</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;change_file_action_id&#39;</span><span class="p">:</span> <span class="n">fa</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="s1">&#39;JL+R&#39;</span><span class="p">})</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">continue</span>
+
+                    <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fa</span><span class="o">.</span><span class="n">file_id</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">changed_files</span> <span class="ow">and</span> <span class="n">java_filename_filter</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">):</span>
+                        <span class="n">changed_files</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">changed_files</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                    <span class="n">current_files</span><span class="p">,</span> <span class="n">path_valid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_current_files</span><span class="p">(</span><span class="n">bugfix_commit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_commit</span><span class="p">,</span> <span class="n">commit_graph</span><span class="p">,</span> <span class="n">undirected_graph</span><span class="p">,</span> <span class="n">rename_cache</span><span class="p">,</span> <span class="n">changed_files</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">path_valid</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_files</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">files_release</span><span class="p">))</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">current_files</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">ret</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                                <span class="n">inf</span> <span class="o">=</span> <span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">external_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">bugfix_commit</span><span class="o">.</span><span class="n">committer_date</span><span class="p">),</span> <span class="n">bugfix_commit</span><span class="o">.</span><span class="n">revision_hash</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">priority</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">issue_type</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">created_at</span><span class="p">))</span>
+
+                                <span class="k">if</span> <span class="n">inf</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ret</span><span class="p">[</span><span class="n">f</span><span class="p">]:</span>
+                                    <span class="n">ret</span><span class="p">[</span><span class="n">f</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inf</span><span class="p">)</span>
+
+        <span class="c1"># todo</span>
+        <span class="c1"># for all files changed in a bugfixing commit find the corresponding names of the file in the release and count those</span>
+        <span class="c1"># bugs toward the file name</span>
+        <span class="k">return</span> <span class="n">ret</span></div>
+
+<div class="viewcode-block" id="Volg.issues"><a class="viewcode-back" href="../api.html#path.Volg.issues">[docs]</a>    <span class="k">def</span> <span class="nf">issues</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load inducing file actions for labeling files accordingly.</span>
+
+<span class="sd">        For all bug-fixing commits that happened after our chosen release:</span>
+<span class="sd">        find bug-inducing commits via induced of FileAction</span>
+
+<span class="sd">        - uses commit label: validated_bugfix</span>
+<span class="sd">        - uses issues from: fixed_issue_ids (manually validated links from commit to issue)</span>
+<span class="sd">        - uses inducing label: JLMIV+ (Jira Links Manual(JLM), Issue Validation(IV), only java files(+), skip comments and empty spaces in blame(+))</span>
+
+<span class="sd">        ALL inducing commits of ALL bug fixing commits MUST have a path to the release.</span>
+<span class="sd">        The only exceptions are partial fixes when the inducing commit without a path to the release is a bug fixing commit for the same issue.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">buginducing_commits</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">skipped_issues</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">all_fixed_issues</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">commit</span> <span class="ow">in</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">committer_date__gt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span><span class="p">,</span> <span class="n">labels__validated_bugfix</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fixed_issue_ids__0__exists</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;committer_date&#39;</span><span class="p">,</span> <span class="s1">&#39;fixed_issue_ids&#39;</span><span class="p">,</span> <span class="s1">&#39;revision_hash&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">timeout</span><span class="p">(</span><span class="kc">False</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">Issue</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">id__in</span><span class="o">=</span><span class="n">commit</span><span class="o">.</span><span class="n">fixed_issue_ids</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">issue</span><span class="o">.</span><span class="n">issue_type_verified</span> <span class="ow">and</span> <span class="n">issue</span><span class="o">.</span><span class="n">issue_type_verified</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;bug&quot;</span> <span class="ow">and</span> <span class="n">jira_is_resolved_and_fixed</span><span class="p">(</span><span class="n">issue</span><span class="p">):</span>
+                    <span class="n">all_fixed_issues</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">issue</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">issue</span> <span class="ow">in</span> <span class="n">all_fixed_issues</span><span class="p">:</span>
+            <span class="n">inducings_have_path</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">blame_commits</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">for</span> <span class="n">bugfix_commit</span> <span class="ow">in</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">fixed_issue_ids</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">committer_date__gt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;revision_hash&#39;</span><span class="p">,</span> <span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;fixed_issue_ids&#39;</span><span class="p">,</span> <span class="s1">&#39;committer_date&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">timeout</span><span class="p">(</span><span class="kc">False</span><span class="p">):</span>
+
+                <span class="k">for</span> <span class="n">fa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">bugfix_commit</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;M&#39;</span><span class="p">):</span>
+
+                    <span class="c1"># load bug_inducing FileActions</span>
+                    <span class="k">for</span> <span class="n">ifa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">induces__match</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;change_file_action_id&#39;</span><span class="p">:</span> <span class="n">fa</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="s1">&#39;label&#39;</span><span class="p">:</span> <span class="s1">&#39;JLMIV+R&#39;</span><span class="p">}):</span>
+
+                        <span class="c1"># still need to fetch the correct one</span>
+                        <span class="k">for</span> <span class="n">ind</span> <span class="ow">in</span> <span class="n">ifa</span><span class="o">.</span><span class="n">induces</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">ind</span><span class="p">[</span><span class="s1">&#39;change_file_action_id&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">fa</span><span class="o">.</span><span class="n">id</span> <span class="ow">and</span> <span class="n">ind</span><span class="p">[</span><span class="s1">&#39;label&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;JLMIV+R&#39;</span> <span class="ow">and</span> <span class="n">ind</span><span class="p">[</span><span class="s1">&#39;szz_type&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;hard_suspect&#39;</span><span class="p">:</span>
+
+                                <span class="n">bc</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">ifa</span><span class="o">.</span><span class="n">commit_id</span><span class="p">)</span>
+                                <span class="n">blame_commit</span> <span class="o">=</span> <span class="n">bc</span><span class="o">.</span><span class="n">revision_hash</span>
+                                <span class="n">blame_file</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">ifa</span><span class="o">.</span><span class="n">file_id</span><span class="p">)</span><span class="o">.</span><span class="n">path</span>
+
+                                <span class="n">blame_id</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">blame_commit</span><span class="p">,</span> <span class="n">issue</span><span class="o">.</span><span class="n">external_id</span><span class="p">)</span>
+
+                                <span class="n">blame_commits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">blame_id</span><span class="p">)</span>
+
+                                <span class="c1"># if this inducing commit has no path to our release we skip it altogether</span>
+                                <span class="k">if</span> <span class="ow">not</span> <span class="n">nx</span><span class="o">.</span><span class="n">has_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="p">,</span> <span class="n">blame_commit</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_target_release_hash</span><span class="p">):</span>
+                                    <span class="k">if</span> <span class="n">bc</span><span class="o">.</span><span class="n">fixed_issue_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">issue</span><span class="o">.</span><span class="n">id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">bc</span><span class="o">.</span><span class="n">fixed_issue_ids</span><span class="p">:</span>
+                                        <span class="n">inducings_have_path</span> <span class="o">=</span> <span class="kc">False</span>
+                                        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">{}</span><span class="s1">] has no path to release, skipping issue: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">blame_commit</span><span class="p">,</span> <span class="n">issue</span><span class="o">.</span><span class="n">external_id</span><span class="p">))</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="c1"># skip if we are not interested in the blame_file (because it does not point to a release file)</span>
+                                    <span class="k">if</span> <span class="n">blame_file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                                        <span class="k">if</span> <span class="n">java_filename_filter</span><span class="p">(</span><span class="n">blame_file</span><span class="p">,</span> <span class="n">production_only</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">{}</span><span class="s1">] </span><span class="si">{}</span><span class="s1"> not in release files or aliases </span><span class="si">{}</span><span class="s1">, skipping issues: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">blame_commit</span><span class="p">,</span> <span class="n">blame_file</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">issue</span><span class="o">.</span><span class="n">external_id</span><span class="p">))</span>
+                                        <span class="n">skipped_issues</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">external_id</span><span class="p">)</span>
+                                        <span class="k">continue</span>
+
+                                    <span class="k">if</span> <span class="n">blame_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">buginducing_commits</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                                        <span class="n">buginducing_commits</span><span class="p">[</span><span class="n">blame_id</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+                                    <span class="k">if</span> <span class="n">blame_file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">buginducing_commits</span><span class="p">[</span><span class="n">blame_id</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                                        <span class="n">buginducing_commits</span><span class="p">[</span><span class="n">blame_id</span><span class="p">][</span><span class="n">blame_file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+                                    <span class="n">buginducing_commits</span><span class="p">[</span><span class="n">blame_id</span><span class="p">][</span><span class="n">blame_file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">issue</span><span class="o">.</span><span class="n">external_id</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">bugfix_commit</span><span class="o">.</span><span class="n">committer_date</span><span class="p">),</span> <span class="n">bugfix_commit</span><span class="o">.</span><span class="n">revision_hash</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">priority</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">issue_type_verified</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="nb">str</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">created_at</span><span class="p">)))</span>
+
+            <span class="c1"># not every blame commit has a path to the release</span>
+            <span class="c1"># we need to remove all of them in this case</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">inducings_have_path</span><span class="p">:</span>
+                <span class="n">skipped_issues</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">external_id</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">blame_id</span> <span class="ow">in</span> <span class="n">blame_commits</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">blame_id</span> <span class="ow">in</span> <span class="n">buginducing_commits</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>  <span class="c1"># may not be present because its a hard_suspect</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">{}</span><span class="s1">] found inducing commits wihtout path, deleting issue </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">blame_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="n">blame_id</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)[</span><span class="mi">1</span><span class="p">]))</span>
+                        <span class="k">del</span> <span class="n">buginducing_commits</span><span class="p">[</span><span class="n">blame_id</span><span class="p">]</span>
+        <span class="n">ret_issues</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">blame_commit</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">buginducing_commits</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">file</span><span class="p">,</span> <span class="n">issues</span> <span class="ow">in</span> <span class="n">values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">release_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">[</span><span class="n">file</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">release_file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ret_issues</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">ret_issues</span><span class="p">[</span><span class="n">release_file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">issues</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">i</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ret_issues</span><span class="p">[</span><span class="n">release_file</span><span class="p">]:</span>
+                        <span class="n">ret_issues</span><span class="p">[</span><span class="n">release_file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;adding issue </span><span class="si">{}</span><span class="s1"> to file </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">release_file</span><span class="p">))</span>
+                        <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">skipped_issues</span><span class="p">:</span>
+                            <span class="n">skipped_issues</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">ret_issues</span></div>
+
+    <span class="k">def</span> <span class="nf">_add_linked_issues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">commit</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">issue_id</span> <span class="ow">in</span> <span class="n">commit</span><span class="o">.</span><span class="n">linked_issue_ids</span><span class="p">:</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="n">Issue</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">issue_id</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;linked_issues&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s1">&#39;external_id&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">external_id</span><span class="p">,</span> <span class="s1">&#39;priority&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">priority</span><span class="p">,</span> <span class="s1">&#39;issue_type&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">issue_type</span><span class="p">})</span>
+
+    <span class="k">def</span> <span class="nf">_add_change_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">fa</span><span class="p">,</span> <span class="n">commit</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add change metrics to our current batch.</span>
+
+<span class="sd">        It prepends to a list because we are traversing backwards from the release date.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">author_identity</span> <span class="o">=</span> <span class="n">commit</span><span class="o">.</span><span class="n">author_id</span>  <span class="c1"># author_identity = Identity.objects.get(people=commit.author_id)  for now we ignore Identities</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;authors&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">author_identity</span><span class="p">)]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;authors&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;revisions&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">commit</span><span class="o">.</span><span class="n">revision_hash</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;revisions&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">fa</span><span class="o">.</span><span class="n">lines_added</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">fa</span><span class="o">.</span><span class="n">lines_deleted</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;changesets&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">Hunk</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">file_action_id__in</span><span class="o">=</span><span class="p">[</span><span class="n">ffa</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">ffa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">commit</span><span class="o">.</span><span class="n">id</span><span class="p">)]))]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;changesets&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;commit_messages&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">commit</span><span class="o">.</span><span class="n">message</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;commit_messages&#39;</span><span class="p">]</span>
+
+        <span class="c1"># we also calculate a list of ages to calulate weighted age later</span>
+        <span class="c1"># weighted age according to Moser et al.</span>
+        <span class="n">td</span> <span class="o">=</span> <span class="n">commit</span><span class="o">.</span><span class="n">committer_date</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_first_occurences</span><span class="p">[</span><span class="n">file</span><span class="p">]</span>
+        <span class="n">td2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span> <span class="o">-</span> <span class="n">commit</span><span class="o">.</span><span class="n">committer_date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;ages&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">td</span><span class="o">.</span><span class="n">days</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;ages&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;days_from_release&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">td2</span><span class="o">.</span><span class="n">days</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;days_from_release&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_add_refactorings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">):</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">ref</span> <span class="ow">in</span> <span class="n">Refactoring</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">commit</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;ce_after&#39;</span> <span class="ow">in</span> <span class="n">ref</span><span class="o">.</span><span class="n">ce_state</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">ces</span> <span class="o">=</span> <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">ref</span><span class="o">.</span><span class="n">ce_state</span><span class="p">[</span><span class="s1">&#39;ce_after&#39;</span><span class="p">])</span>
+                <span class="k">if</span> <span class="n">ces</span><span class="p">:</span>
+                    <span class="n">file</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">ces</span><span class="o">.</span><span class="n">file_id</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="k">continue</span>
+
+                    <span class="n">cache</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">file</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">ref</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">ces</span><span class="o">.</span><span class="n">long_name</span><span class="p">))</span>
+                    <span class="c1"># self._log.debug(&#39;[{}] refactoring File: {}, CES: {}, Type: {}&#39;.format(revision_hash, file.path, ces.long_name, ref.type))</span>
+        <span class="k">for</span> <span class="p">(</span><span class="n">ref_file</span><span class="p">,</span> <span class="n">ref</span><span class="p">,</span> <span class="n">long_name</span><span class="p">)</span> <span class="ow">in</span> <span class="n">cache</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">[</span><span class="n">ref_file</span><span class="p">]][</span><span class="s1">&#39;refactorings&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ref</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_add_change_types</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old_commit</span><span class="p">,</span> <span class="n">new_commit</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cc</span> <span class="o">=</span> <span class="n">CommitChanges</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">old_commit_id</span><span class="o">=</span><span class="n">old_commit</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">new_commit_id</span><span class="o">=</span><span class="n">new_commit</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">CommitChanges</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cc</span><span class="o">.</span><span class="n">classification</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">for</span> <span class="n">file_id</span><span class="p">,</span> <span class="n">changes</span> <span class="ow">in</span> <span class="n">cc</span><span class="o">.</span><span class="n">classification</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">file_id</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">file</span><span class="o">.</span><span class="n">path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># initialize the file with 0 if it does not exist</span>
+            <span class="n">change_types</span> <span class="o">=</span> <span class="p">{</span><span class="n">d</span><span class="p">:</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">CHANGE_TYPES</span><span class="p">}</span>
+
+            <span class="c1"># update with new values</span>
+            <span class="k">for</span> <span class="n">ctype</span><span class="p">,</span> <span class="n">cvalue</span> <span class="ow">in</span> <span class="n">changes</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">change_types</span><span class="p">[</span><span class="n">ctype</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span> <span class="o">+=</span> <span class="n">cvalue</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">[</span><span class="n">file</span><span class="o">.</span><span class="n">path</span><span class="p">]][</span><span class="s1">&#39;change_types&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="p">[</span><span class="n">change_types</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_add_dambros_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Use for dambros.&quot;&quot;&quot;</span>
+        <span class="c1"># 1. check if current commit is within the window_size in days, if yes skip this commit</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_last_date</span> <span class="o">-</span> <span class="n">relativedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dambros_window_size_days</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">commit</span><span class="o">.</span><span class="n">committer_date</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_last_date</span> <span class="o">=</span> <span class="n">commit</span><span class="o">.</span><span class="n">committer_date</span>
+
+        <span class="c1"># we need to collect the classes per file</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">path__in</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+        <span class="c1"># 2. if not collect metrics from the commit and filter for files in our aliases</span>
+        <span class="n">classes</span> <span class="o">=</span> <span class="n">CodeEntityState</span><span class="o">.</span><span class="n">objects</span><span class="p">()</span><span class="o">.</span><span class="n">aggregate</span><span class="p">(</span><span class="o">*</span><span class="p">[</span>
+            <span class="p">{</span><span class="s1">&#39;$match&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;_id&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$in&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">ObjectId</span><span class="p">(</span><span class="n">cesid</span><span class="p">)</span> <span class="k">for</span> <span class="n">cesid</span> <span class="ow">in</span> <span class="n">commit</span><span class="o">.</span><span class="n">code_entity_states</span><span class="p">]},</span> <span class="s1">&#39;ce_type&#39;</span><span class="p">:</span> <span class="s1">&#39;class&#39;</span><span class="p">,</span> <span class="s1">&#39;file_id&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$in&#39;</span><span class="p">:</span> <span class="p">[</span><span class="n">ObjectId</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]}}},</span>
+            <span class="p">{</span><span class="s1">&#39;$group&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;_id&#39;</span><span class="p">:</span> <span class="s1">&#39;$file_id&#39;</span><span class="p">,</span>
+                        <span class="s1">&#39;wmc&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.WMC&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;dit&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.DIT&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;rfc&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.RFC&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;noc&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.NOC&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;cbo&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.CBO&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;lcom5&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.LCOM5&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;nii&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.NII&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;noi&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.NOI&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;tna&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.TNA&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;tnpa&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.TNPA&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;tloc&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.TLOC&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;tnm&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.TNM&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;tnlpm&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.TNLPM&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;tnla&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.TNLA&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;tnpm&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.TNPM&#39;</span><span class="p">},</span>
+                        <span class="s1">&#39;tnlm&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$avg&#39;</span><span class="p">:</span> <span class="s1">&#39;$metrics.TNLM&#39;</span><span class="p">}</span>
+                        <span class="p">}},</span>
+            <span class="p">{</span><span class="s1">&#39;$addFields&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;tna-tnpa&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$subtract&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;$tna&#39;</span><span class="p">,</span> <span class="s1">&#39;$tnpa&#39;</span><span class="p">]},</span>
+                            <span class="s1">&#39;tna-tnla&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$subtract&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;$tna&#39;</span><span class="p">,</span> <span class="s1">&#39;$tnla&#39;</span><span class="p">]},</span>
+                            <span class="s1">&#39;tnm-tnpm&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$subtract&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;$tnm&#39;</span><span class="p">,</span> <span class="s1">&#39;$tnpm&#39;</span><span class="p">]},</span>
+                            <span class="s1">&#39;tnm-tnlm&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;$subtract&#39;</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;$tnm&#39;</span><span class="p">,</span> <span class="s1">&#39;$tnlm&#39;</span><span class="p">]}}}</span>
+        <span class="p">])</span>
+
+        <span class="c1"># grouped by file id</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">cl</span> <span class="ow">in</span> <span class="n">classes</span><span class="p">:</span>
+            <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">cl</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">])</span>
+            <span class="n">target</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">]</span>
+
+            <span class="n">tmp</span><span class="p">[</span><span class="n">target</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_metrics_used</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">cl</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">cl</span><span class="p">[</span><span class="n">m</span><span class="p">]:</span>
+                    <span class="n">tmp</span><span class="p">[</span><span class="n">target</span><span class="p">][</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">cl</span><span class="p">[</span><span class="n">m</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Volg.dambros_deltas"><a class="viewcode-back" href="../api.html#path.Volg.dambros_deltas">[docs]</a>    <span class="k">def</span> <span class="nf">dambros_deltas</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create the dambros delta matrix of our collected metrics.&quot;&quot;&quot;</span>
+        <span class="n">deltas</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_metrics_used</span><span class="p">:</span>
+            <span class="n">deltas</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">deltas</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># reverse the entries as we are going from release to end of change path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_values</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dambros_values</span><span class="p">))</span>
+
+        <span class="c1"># create the deltas pairwise</span>
+        <span class="k">for</span> <span class="n">entry1</span><span class="p">,</span> <span class="n">entry2</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dambros_values</span><span class="p">[::</span><span class="mi">2</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dambros_values</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]):</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="c1"># if the file does not exist in our data in one or the other (or both) set the value to -1</span>
+                <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entry1</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">or</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entry2</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">deltas</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">deltas</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+                <span class="c1"># otherwise we set the value to the absolute delta</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">deltas</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">entry1</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">entry2</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                            <span class="n">deltas</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">entry1</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="n">m</span><span class="p">]</span> <span class="o">-</span> <span class="n">entry2</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="n">m</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">deltas</span></div>
+
+<div class="viewcode-block" id="Volg.change_metrics"><a class="viewcode-back" href="../api.html#path.Volg.change_metrics">[docs]</a>    <span class="k">def</span> <span class="nf">change_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Change path metric calculation.</span>
+
+<span class="sd">        Uses the change paths which uses a cutoff time.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_paths</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">revision_hash</span> <span class="ow">in</span> <span class="n">path</span><span class="p">:</span>
+                <span class="n">c</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">revision_hash</span><span class="o">=</span><span class="n">revision_hash</span><span class="p">)</span>
+
+                <span class="c1"># skip merge commits as we traverse all possible paths</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">parents</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="k">for</span> <span class="n">fa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">):</span>
+                    <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fa</span><span class="o">.</span><span class="n">file_id</span><span class="p">)</span>
+
+                    <span class="c1"># skip file we are not interested in</span>
+                    <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="k">continue</span>
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_linked_issues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">],</span> <span class="n">c</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_change_metrics</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_aliases</span><span class="p">[</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">],</span> <span class="n">fa</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_refactorings</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">parents</span><span class="p">:</span>
+                    <span class="n">prev</span> <span class="o">=</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_vcs</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">revision_hash</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_add_change_types</span><span class="p">(</span><span class="n">prev</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_dambros_metrics</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">fo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_first_occurences</span><span class="p">[</span><span class="n">file</span><span class="p">]</span>
+            <span class="n">td</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_release_date</span> <span class="o">-</span> <span class="n">fo</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;age&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">td</span><span class="o">.</span><span class="n">days</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;first_occurence&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fo</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_change_metrics</span></div>
+
+    <span class="k">def</span> <span class="nf">_heuristic_renames</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return most probable rename from all FileActions, rest count as DEL/NEW.</span>
+
+<span class="sd">        There may be multiple renames of the same file in the same commit, e.g., A-&gt;B, A-&gt;C.</span>
+<span class="sd">        This is due to pygit2 and the Git heuristic for rename detection.</span>
+<span class="sd">        This function uses another heuristic to detect renames by employing a string distance metric on the file name.</span>
+<span class="sd">        This captures things like commons-math renames org.apache.math -&gt; org.apache.math3.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">renames</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">fa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">commit</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;R&#39;</span><span class="p">):</span>
+            <span class="n">new_file</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fa</span><span class="o">.</span><span class="n">file_id</span><span class="p">)</span>
+            <span class="n">old_file</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fa</span><span class="o">.</span><span class="n">old_file_id</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">old_file</span><span class="o">.</span><span class="n">path</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">renames</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">renames</span><span class="p">[</span><span class="n">old_file</span><span class="o">.</span><span class="n">path</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">renames</span><span class="p">[</span><span class="n">old_file</span><span class="o">.</span><span class="n">path</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_file</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="n">true_renames</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">added_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">old_file</span><span class="p">,</span> <span class="n">new_files</span> <span class="ow">in</span> <span class="n">renames</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+            <span class="c1"># only one file, easy</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_files</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">true_renames</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">old_file</span><span class="p">,</span> <span class="n">new_files</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># multiple files, find the best matching</span>
+            <span class="n">min_dist</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+            <span class="n">probable_file</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">new_files</span><span class="p">:</span>
+                <span class="n">d</span> <span class="o">=</span> <span class="n">distance</span><span class="p">(</span><span class="n">old_file</span><span class="p">,</span> <span class="n">new_file</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">d</span> <span class="o">&lt;</span> <span class="n">min_dist</span><span class="p">:</span>
+                    <span class="n">min_dist</span> <span class="o">=</span> <span class="n">d</span>
+                    <span class="n">probable_file</span> <span class="o">=</span> <span class="n">new_file</span>
+            <span class="n">true_renames</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">old_file</span><span class="p">,</span> <span class="n">probable_file</span><span class="p">))</span>
+
+            <span class="k">for</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">new_files</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">new_file</span> <span class="o">==</span> <span class="n">probable_file</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">added_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_file</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">true_renames</span><span class="p">,</span> <span class="n">added_files</span>
+
+    <span class="k">def</span> <span class="nf">_first_occured_fallback</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vcs</span><span class="p">,</span> <span class="n">file_name</span><span class="p">):</span>
+
+        <span class="n">needle</span> <span class="o">=</span> <span class="n">file_name</span>
+
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;-committer_date&#39;</span><span class="p">,</span> <span class="s1">&#39;-author_date&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;revision_hash&#39;</span><span class="p">,</span> <span class="s1">&#39;parents&#39;</span><span class="p">,</span> <span class="s1">&#39;committer_date&#39;</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">nx</span><span class="o">.</span><span class="n">has_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">revision_hash</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_target_release_hash</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># merge commits are allowd in fallback mode</span>
+            <span class="c1"># if len(c.parents) &gt; 1:</span>
+            <span class="c1">#    continue</span>
+
+            <span class="k">for</span> <span class="n">fa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">mode__in</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">]):</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fa</span><span class="o">.</span><span class="n">file_id</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">path</span> <span class="o">==</span> <span class="n">needle</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">c</span><span class="o">.</span><span class="n">committer_date</span>
+
+            <span class="n">true_renames</span><span class="p">,</span> <span class="n">false_renames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heuristic_renames</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">old_file</span><span class="p">,</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">true_renames</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">needle</span> <span class="o">==</span> <span class="n">new_file</span><span class="p">:</span>
+                    <span class="n">needle</span> <span class="o">=</span> <span class="n">old_file</span>
+
+            <span class="k">for</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">false_renames</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">new_file</span> <span class="o">==</span> <span class="n">needle</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">c</span><span class="o">.</span><span class="n">committer_date</span>
+
+<div class="viewcode-block" id="Volg.first_occured"><a class="viewcode-back" href="../api.html#path.Volg.first_occured">[docs]</a>    <span class="k">def</span> <span class="nf">first_occured</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">vcs</span><span class="p">,</span> <span class="n">paths</span><span class="p">,</span> <span class="n">release_files</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Traverse all FileActions of all paths to find when which file was added.</span>
+
+<span class="sd">        Follows subsequent renames. We collect aliases for files because we need to know</span>
+<span class="sd">        which names point to a file contained in the release.</span>
+<span class="sd">        We do this by having key, value pairs of alias -&gt; release file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">additions</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">aliases</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">file_name_changes</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># prefill aliases with release files</span>
+        <span class="k">for</span> <span class="n">release_file</span> <span class="ow">in</span> <span class="n">release_files</span><span class="p">:</span>
+            <span class="n">aliases</span><span class="p">[</span><span class="n">release_file</span><span class="p">]</span> <span class="o">=</span> <span class="n">release_file</span>
+
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">Commit</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">vcs_system_id</span><span class="o">=</span><span class="n">vcs</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">&#39;-committer_date&#39;</span><span class="p">,</span> <span class="s1">&#39;-author_date&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">only</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">,</span> <span class="s1">&#39;revision_hash&#39;</span><span class="p">,</span> <span class="s1">&#39;parents&#39;</span><span class="p">,</span> <span class="s1">&#39;committer_date&#39;</span><span class="p">):</span>
+
+            <span class="n">revision_hash</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">revision_hash</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">nx</span><span class="o">.</span><span class="n">has_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_graph</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">revision_hash</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_target_release_hash</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">parents</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">true_renames</span><span class="p">,</span> <span class="n">false_renames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_heuristic_renames</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">old_file</span><span class="p">,</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">true_renames</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">old_file</span> <span class="ow">in</span> <span class="n">aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">aliases</span><span class="p">[</span><span class="n">old_file</span><span class="p">]</span> <span class="o">!=</span> <span class="n">aliases</span><span class="p">[</span><span class="n">new_file</span><span class="p">]:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;[</span><span class="si">{}</span><span class="s1">] would overwrite target </span><span class="si">{}</span><span class="s1"> of alias </span><span class="si">{}</span><span class="s1"> with target </span><span class="si">{}</span><span class="s1">, creating fake addition of the target, skipping&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">revision_hash</span><span class="p">,</span> <span class="n">aliases</span><span class="p">[</span><span class="n">old_file</span><span class="p">],</span> <span class="n">old_file</span><span class="p">,</span> <span class="n">aliases</span><span class="p">[</span><span class="n">new_file</span><span class="p">]))</span>
+                    <span class="c1"># test with fallback</span>
+                    <span class="c1"># false_renames.append(aliases[new_file])</span>
+                    <span class="k">continue</span>
+
+                <span class="c1"># if the file is in our release files (directly)</span>
+                <span class="k">if</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">release_files</span><span class="p">:</span>
+                    <span class="n">aliases</span><span class="p">[</span><span class="n">old_file</span><span class="p">]</span> <span class="o">=</span> <span class="n">aliases</span><span class="p">[</span><span class="n">new_file</span><span class="p">]</span>  <span class="c1"># this works because we prefilled the aliases with target -&gt; target</span>
+
+                <span class="c1"># else we have a subsequent rename</span>
+                <span class="k">elif</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> <span class="n">aliases</span><span class="p">[</span><span class="n">new_file</span><span class="p">]</span> <span class="ow">in</span> <span class="n">release_files</span><span class="p">:</span>
+                    <span class="n">aliases</span><span class="p">[</span><span class="n">old_file</span><span class="p">]</span> <span class="o">=</span> <span class="n">aliases</span><span class="p">[</span><span class="n">new_file</span><span class="p">]</span>
+
+                <span class="c1"># also record file name changes, currently only used by external dambros</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">parents</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">file_name_changes</span><span class="p">[</span><span class="n">aliases</span><span class="p">[</span><span class="n">new_file</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="n">c</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span> <span class="n">old_file</span><span class="p">}</span>
+
+            <span class="c1"># we collect additions from three sources:</span>
+            <span class="c1"># 1. additions via doublicate renames (false_renames, see _heuristic_renames)</span>
+            <span class="c1"># 2. real file addtions from git</span>
+            <span class="c1"># 3. targets of copy operations</span>
+            <span class="n">added_files</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">false_renames</span><span class="p">:</span>
+                <span class="n">added_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_file</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">fa</span> <span class="ow">in</span> <span class="n">FileAction</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">commit_id</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">mode__in</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">]):</span>
+                <span class="n">f</span> <span class="o">=</span> <span class="n">File</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">fa</span><span class="o">.</span><span class="n">file_id</span><span class="p">)</span>
+                <span class="n">added_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">new_file</span> <span class="ow">in</span> <span class="n">added_files</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">new_file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">additions</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">additions</span><span class="p">[</span><span class="n">new_file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">additions</span><span class="p">[</span><span class="n">new_file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">committer_date</span><span class="p">)</span>
+
+        <span class="n">ret</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">add_dates</span> <span class="ow">in</span> <span class="n">additions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">file_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">aliases</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">aliases</span><span class="p">[</span><span class="n">file_name</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ret</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">ret</span><span class="p">[</span><span class="n">aliases</span><span class="p">[</span><span class="n">file_name</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">ret</span><span class="p">[</span><span class="n">aliases</span><span class="p">[</span><span class="n">file_name</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">add_dates</span>
+
+        <span class="c1"># added files contains all files but we only need release files so we only trigger the fallback for release files</span>
+        <span class="k">for</span> <span class="n">file_name</span> <span class="ow">in</span> <span class="n">release_files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">file_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ret</span><span class="p">:</span>
+                <span class="n">ret</span><span class="p">[</span><span class="n">file_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_first_occured_fallback</span><span class="p">(</span><span class="n">vcs</span><span class="p">,</span> <span class="n">file_name</span><span class="p">)]</span>
+
+        <span class="n">first_occurences</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">add_dates</span> <span class="ow">in</span> <span class="n">ret</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">first_occurences</span><span class="p">[</span><span class="n">file_name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">add_dates</span><span class="p">)</span>  <span class="c1"># if we have multiple possible addition dates we use the max</span>
+
+        <span class="k">return</span> <span class="n">first_occurences</span><span class="p">,</span> <span class="n">aliases</span><span class="p">,</span> <span class="n">file_name_changes</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Alexander Trautsch
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

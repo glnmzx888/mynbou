@@ -1,0 +1,560 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>metrics.change &mdash; mynbou 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> mynbou
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../intro.html">Intro</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">mynbou</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>metrics.change</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for metrics.change</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+<span class="c1"># -*- coding: utf-8 -*-</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains functions for calculation of change metrics.</span>
+
+<span class="sd">For now this contains change metrics as as proposed by Moser et al. :cite:`moser`, Hassan :cite:`hassan` and the extensions proposed by D&#39;Ambros et al. :cite:`dambros`.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">from</span> <span class="nn">mynbou.aggregation</span> <span class="kn">import</span> <span class="n">msum</span>
+
+
+<div class="viewcode-block" id="hassan"><a class="viewcode-back" href="../../api.html#metrics.change.hassan">[docs]</a><span class="k">def</span> <span class="nf">hassan</span><span class="p">(</span><span class="n">instances</span><span class="p">,</span> <span class="n">window_size_days</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">phi1</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">phi2</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">phi3</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate Hassan complexity of change metrics with the additon from D&#39;Ambros.</span>
+
+<span class="sd">    The addition includes not only if the file has changed</span>
+<span class="sd">    but also the number of lines (added + deleted).</span>
+<span class="sd">    Requires the following lists in the dict: lines_added, lines_deleted, days_from_release (list of days before release where the file changed).</span>
+
+<span class="sd">    :param dict instances: dict with structure {&#39;filepath&#39;: {&#39;lines_added&#39;: [1,2], ...}}.</span>
+<span class="sd">    :param int window_size_days: window size in days</span>
+<span class="sd">    :param float phi1: decay factor</span>
+<span class="sd">    :param float phi2: decay factor</span>
+<span class="sd">    :param float phi3: decay factor</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    :returns: dict with key filepath and values change metrics</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rel</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># sum of changed lines and max age for temporal slicing</span>
+    <span class="n">max_age</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">all_changed_lines</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">days</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="n">n</span> <span class="o">=</span> <span class="n">instances</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>  <span class="c1"># all files in the system</span>
+    <span class="n">n_bar</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>  <span class="c1"># all files changed in the current period (e.g., 6 months not window_size!)</span>
+    <span class="k">for</span> <span class="n">file</span><span class="p">,</span> <span class="n">metrics</span> <span class="ow">in</span> <span class="n">instances</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+        <span class="c1"># this creates basically a lookup table of day -&gt; list of files</span>
+        <span class="k">for</span> <span class="n">day</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;days_from_release&#39;</span><span class="p">]):</span>
+            <span class="k">if</span> <span class="n">day</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">days</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">days</span><span class="p">[</span><span class="n">day</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">days</span><span class="p">[</span><span class="n">day</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+            <span class="n">n_bar</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+
+        <span class="c1"># find max age used for the range calculation later</span>
+        <span class="c1"># ages can be empty if the file was never changed in our current mining path</span>
+        <span class="k">if</span> <span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;days_from_release&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="nb">max</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;days_from_release&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">max_age</span><span class="p">:</span>
+            <span class="n">max_age</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;days_from_release&#39;</span><span class="p">])</span>
+        <span class="c1"># find all changed lines over the complete release</span>
+        <span class="n">all_changed_lines</span> <span class="o">+=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;lines_added&#39;</span><span class="p">])</span> <span class="o">+</span> <span class="nb">sum</span><span class="p">(</span><span class="n">metrics</span><span class="p">[</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">])</span>
+
+    <span class="n">n_bar</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">n_bar</span><span class="p">)</span>  <span class="c1"># we just need the number of files changed in the change path</span>
+
+    <span class="c1"># 1. create a range of days with window_size_days 14 (2 weeks)</span>
+    <span class="c1"># if our date range is not exactly divisible by 14 we do not use the surplus days at the beginning because the days at</span>
+    <span class="c1"># the end of the date range are probably more important (closer to release == 0)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">max_age</span> <span class="o">+</span> <span class="p">(</span><span class="n">max_age</span> <span class="o">%</span> <span class="n">window_size_days</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">window_size_days</span><span class="p">)))</span>
+
+    <span class="c1"># weighted history of complexity metric per file</span>
+    <span class="n">whcm</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># for the history of complexity metric and the version with decay calculation</span>
+    <span class="c1"># we could in theory also use the weighted variant for these but for now we are using the unweighted version as in D&#39;Ambros et al.</span>
+    <span class="n">hcm</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># list of weeks per file, this is just for debugging purposes</span>
+    <span class="n">weeks_list</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># 2. find all changes for this daterange (1 week) zip(a[:-1], a[1:]) == (0,7) (7,14) ...</span>
+    <span class="c1"># we switch this around as we may have decaying factors so first is oldest instead of most recent (therefore a[1:], a[:-1])</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">a</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
+
+        <span class="c1"># find every file that has changed in the date range</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># all lines changed in the daterange</span>
+        <span class="n">all_changed_lines</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># we need this for the weighting part</span>
+        <span class="n">all_changed_files</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="c1"># for each day of the week (range(0,7) == [0,1,2,3,4,5,6])</span>
+        <span class="k">for</span> <span class="n">day</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+
+            <span class="c1"># if nothing was changed on that day, continue</span>
+            <span class="k">if</span> <span class="n">day</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">days</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># every file that is changed on that day</span>
+            <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">days</span><span class="p">[</span><span class="n">day</span><span class="p">]:</span>
+
+                <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">weeks_list</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">weeks_list</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+                <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">weeks_list</span><span class="p">[</span><span class="n">file</span><span class="p">]:</span>
+                    <span class="n">weeks_list</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">))</span>
+
+                <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">files</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">files</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;changed_lines&#39;</span><span class="p">:</span> <span class="p">[]}</span>
+
+                <span class="c1"># 2.1 find changeset for this day, we can do this here because Volg uses lists (which preserve order)</span>
+                <span class="c1"># idx = instances[file][&#39;ages&#39;].index(day)  # this does not work if we have two commits on one day</span>
+
+                <span class="c1"># this is more expensive but works for more than one commit on a given day</span>
+                <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="p">[</span><span class="n">idx</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;days_from_release&#39;</span><span class="p">])</span> <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="n">day</span><span class="p">]:</span>
+                    <span class="n">la</span> <span class="o">=</span> <span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span>
+                    <span class="n">ld</span> <span class="o">=</span> <span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">][</span><span class="n">idx</span><span class="p">]</span>
+
+                    <span class="n">files</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;changed_lines&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">la</span> <span class="o">+</span> <span class="n">ld</span><span class="p">)</span>
+                    <span class="n">all_changed_lines</span> <span class="o">+=</span> <span class="n">la</span> <span class="o">+</span> <span class="n">ld</span>
+
+                    <span class="c1"># we need to count every change to every file for the weighting</span>
+                    <span class="n">all_changed_files</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># adaptive sizing entropy for this period, we use a list because we need to sort the values later</span>
+        <span class="n">ase</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># we could iterate over all files directly but files not changed in this date range would yield p=0 anyway</span>
+        <span class="k">for</span> <span class="n">file</span><span class="p">,</span> <span class="n">dat</span> <span class="ow">in</span> <span class="n">files</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+            <span class="c1"># IMPORTANT: if only one file is changed in the given date range we would have log to the base of 1</span>
+            <span class="c1"># as this is an entropy based formula we set it to 0</span>
+            <span class="c1"># same as when 0 lines are changed</span>
+            <span class="k">if</span> <span class="n">n_bar</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">all_changed_lines</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">dat</span><span class="p">[</span><span class="s1">&#39;changed_lines&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">all_changed_lines</span>
+                <span class="k">if</span> <span class="n">p</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">ase</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="n">p</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">n_bar</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">file</span><span class="p">,</span> <span class="n">dat</span> <span class="ow">in</span> <span class="n">files</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># history of complexity metric, we append the ASE of this period if this file was changed in this period</span>
+            <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">hcm</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">hcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">hcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">msum</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ase</span><span class="p">)))</span>
+
+            <span class="c1"># weighted history of complexity metric</span>
+            <span class="c1"># we weight by number of changes of file for given date range / number of all changes for given date range</span>
+            <span class="c1"># the number of changes we can get by looking at the length of the changed_lines list</span>
+            <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">whcm</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="n">whcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            
+            <span class="k">if</span> <span class="n">all_changed_lines</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">whcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">sum</span><span class="p">(</span><span class="n">dat</span><span class="p">[</span><span class="s1">&#39;changed_lines&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">all_changed_lines</span><span class="p">)</span> <span class="o">*</span> <span class="n">msum</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ase</span><span class="p">)))</span>
+
+    <span class="c1"># now get the real values for the decay of the files from our pre-filled hcm list</span>
+    <span class="n">ldhcm</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">lgdhcm</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">edhcm</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># decay factors</span>
+    <span class="n">phi1</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">phi2</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">phi3</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">hcm</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ldhcm</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">ldhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">lgdhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">edhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">all_changes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">hcm</span><span class="p">[</span><span class="n">file</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">pos</span><span class="p">,</span> <span class="n">hcmval</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hcm</span><span class="p">[</span><span class="n">file</span><span class="p">]):</span>
+            <span class="n">pos</span> <span class="o">=</span> <span class="n">pos</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># we are not starting from zero, otherwise + 1 would not make much sense</span>
+            <span class="n">ldhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hcmval</span> <span class="o">/</span> <span class="p">(</span><span class="n">phi1</span> <span class="o">*</span> <span class="p">(</span><span class="n">all_changes</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">pos</span><span class="p">)))</span>
+            <span class="n">lgdhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hcmval</span> <span class="o">/</span> <span class="p">(</span><span class="n">phi2</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">all_changes</span> <span class="o">+</span> <span class="mf">1.01</span> <span class="o">-</span> <span class="n">pos</span><span class="p">))))</span>
+            <span class="n">edhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hcmval</span> <span class="o">/</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">phi3</span> <span class="o">*</span> <span class="p">(</span><span class="n">all_changes</span> <span class="o">-</span> <span class="n">pos</span><span class="p">))))</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">instances</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">rel</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="c1"># defaults if a file has not changed in our inspection period</span>
+            <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;HASSAN_ldhcm&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;HASSAN_lgdhcm&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;HASSAN_edhcm&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;HASSAN_hcm&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;HASSAN_whcm&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">}</span>
+
+        <span class="c1"># if file in weeks_list.keys():  # debug</span>
+        <span class="c1">#     rel[file][&#39;HASSAN_weeks&#39;] = weeks_list[file]</span>
+
+        <span class="k">if</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">ldhcm</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;HASSAN_ldhcm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">msum</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">ldhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]))</span>
+            <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;HASSAN_lgdhcm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">msum</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">lgdhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]))</span>
+            <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;HASSAN_edhcm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">msum</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">edhcm</span><span class="p">[</span><span class="n">file</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">hcm</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;HASSAN_hcm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">msum</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">hcm</span><span class="p">[</span><span class="n">file</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">whcm</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;HASSAN_whcm&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">msum</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">whcm</span><span class="p">[</span><span class="n">file</span><span class="p">]))</span>
+
+    <span class="k">return</span> <span class="n">rel</span></div>
+
+
+<div class="viewcode-block" id="moser"><a class="viewcode-back" href="../../api.html#metrics.change.moser">[docs]</a><span class="k">def</span> <span class="nf">moser</span><span class="p">(</span><span class="n">instances</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate change metrics after Moser et al.</span>
+
+<span class="sd">    Requires the following lists in the dict: authors, revisions, lines_added, lines_deleted, changesets, commit_messages, ages (list of days after start where the file changed).</span>
+
+<span class="sd">    Requires the following additional fields in the dict: age (date from the end of metrics selection to the first appearance of the file in days)</span>
+
+<span class="sd">    :param dict instances: dict with structure {&#39;filepath&#39;: {&#39;lines_added&#39;: [1,2], ...}}.</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    :returns: dict with key filepath and values change metrics</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rel</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">instances</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;MOSER_authors&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;authors&#39;</span><span class="p">])),</span>
+            <span class="s1">&#39;MOSER_revisions&#39;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;revisions&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;MOSER_sum_lines_added&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;MOSER_max_lines_added&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;MOSER_avg_lines_added&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;MOSER_sum_lines_deleted&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">]),</span>
+            <span class="s1">&#39;MOSER_max_lines_deleted&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;MOSER_avg_lines_deleted&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;MOSER_sum_code_churn&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">])</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">]),</span>
+            <span class="c1"># pairwise churn for finding max</span>
+            <span class="s1">&#39;MOSER_max_code_churn&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">([</span><span class="n">la</span> <span class="o">-</span> <span class="n">ld</span> <span class="k">for</span> <span class="n">la</span><span class="p">,</span> <span class="n">ld</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">],</span> <span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">])],</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;MOSER_avg_code_churn&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+            <span class="s1">&#39;MOSER_max_changeset&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;changesets&#39;</span><span class="p">],</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+            <span class="s1">&#39;MOSER_avg_changeset&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+
+            <span class="c1"># moser_refactorings (ILIKE &#39;%refactor%&#39;)</span>
+            <span class="s1">&#39;MOSER_refactorings&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">([</span><span class="mi">1</span> <span class="k">if</span> <span class="s1">&#39;refactor&#39;</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">else</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;commit_messages&#39;</span><span class="p">]]),</span>
+
+            <span class="c1"># moser_bugfix (ILIKE &#39;%Fix%&#39; AND NOT ILIKE &#39;% prefix %&#39; AND NOT ILIKE &#39;% postfix %&#39;)</span>
+            <span class="s1">&#39;MOSER_bugfix&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">([</span><span class="mi">1</span> <span class="k">if</span> <span class="s1">&#39;fix&#39;</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">and</span> <span class="s1">&#39; prefix &#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">and</span> <span class="s1">&#39; postfix &#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">else</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;commit_messages&#39;</span><span class="p">]]),</span>
+            <span class="s1">&#39;MOSER_age&#39;</span><span class="p">:</span> <span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;age&#39;</span><span class="p">],</span>  <span class="c1"># date from end of metrics selection to first appearence of file in days</span>
+            <span class="s1">&#39;MOSER_weighted_age&#39;</span><span class="p">:</span> <span class="mi">0</span>
+        <span class="p">}</span>
+
+        <span class="c1"># weighted age is age wighted by changes to the file</span>
+        <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;MOSER_weighted_age&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">a</span> <span class="o">*</span> <span class="n">b</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;ages&#39;</span><span class="p">],</span> <span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">])])</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;revisions&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;MOSER_avg_lines_added&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;revisions&#39;</span><span class="p">]),</span>
+                   <span class="s1">&#39;MOSER_avg_lines_deleted&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;revisions&#39;</span><span class="p">]),</span>
+                   <span class="s1">&#39;MOSER_avg_code_churn&#39;</span><span class="p">:</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_added&#39;</span><span class="p">])</span> <span class="o">-</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;lines_deleted&#39;</span><span class="p">]))</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;revisions&#39;</span><span class="p">]),</span>
+                   <span class="s1">&#39;MOSER_avg_changeset&#39;</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;changesets&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">instances</span><span class="p">[</span><span class="n">file</span><span class="p">][</span><span class="s1">&#39;revisions&#39;</span><span class="p">])}</span>
+            <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">tmp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">rel</span></div>
+
+
+<div class="viewcode-block" id="dambros"><a class="viewcode-back" href="../../api.html#metrics.change.dambros">[docs]</a><span class="k">def</span> <span class="nf">dambros</span><span class="p">(</span><span class="n">instances</span><span class="p">,</span> <span class="n">deltas</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">phi1</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">phi2</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">phi3</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate D&#39;Ambros et al. churn of source code metrics and entropy of source code metrics.</span>
+
+<span class="sd">    In contrast to D&#39;Ambros et al. who used multiple delta matrices we are using just one with an additional dimension of filepath.</span>
+
+<span class="sd">    :param dict instances: dict with structure {&#39;filepath&#39;: {&#39;metric1&#39;: [1,2], ...}}. Only the filepath as key is needed here.</span>
+<span class="sd">    :param dict deltas: dict with structure {&#39;metric1&#39;: {&#39;filepath&#39;: [deltavalue1, deltavalue2, ...]}}</span>
+<span class="sd">    :param float phi1: decay factor</span>
+<span class="sd">    :param float phi2: decay factor</span>
+<span class="sd">    :param float phi3: decay factor</span>
+<span class="sd">    :rtype: dict</span>
+<span class="sd">    :returns: dict with key filepath and values change metrics</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">rel</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># sum up the deltas for each file over one timestep</span>
+    <span class="n">sum_rows</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">R_j</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">entropy_h</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># we need sum of columns also per metric</span>
+    <span class="k">for</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">deltas</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="n">metric</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sum_rows</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">sum_rows</span><span class="p">[</span><span class="n">metric</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="n">metric</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entropy_h</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">R_j</span><span class="p">[</span><span class="n">metric</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">deltas</span><span class="p">[</span><span class="n">metric</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">deltas</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">file</span><span class="p">]):</span>
+
+                <span class="n">absval</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="c1"># add every value &gt; 0</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sum_rows</span><span class="p">[</span><span class="n">metric</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">sum_rows</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">R_j</span><span class="p">[</span><span class="n">metric</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">R_j</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+                    <span class="c1"># number of values greater than 0</span>
+                    <span class="n">R_j</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">sum_rows</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">absval</span><span class="p">)</span>  <span class="c1"># sum of values greater than 0 for each timestep over all classes</span>
+
+    <span class="c1"># entropy for every column (still over all files)</span>
+    <span class="k">for</span> <span class="n">metric</span> <span class="ow">in</span> <span class="n">deltas</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="n">metric</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entropy_h</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">entropy_h</span><span class="p">[</span><span class="n">metric</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">deltas</span><span class="p">[</span><span class="n">metric</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">deltas</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">file</span><span class="p">]):</span>
+
+                <span class="n">absval</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">j</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">entropy_h</span><span class="p">[</span><span class="n">metric</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="n">entropy_h</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">p</span> <span class="o">=</span> <span class="n">absval</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">sum_rows</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+
+                    <span class="c1"># IMPORTANT: if we end up with a base of 0 or 1 for log we are not adding the value to the summation list</span>
+                    <span class="c1"># as this is an entropy based formula</span>
+                    <span class="k">if</span> <span class="n">R_j</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">p</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="n">entropy_h</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="n">p</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">R_j</span><span class="p">[</span><span class="n">metric</span><span class="p">][</span><span class="n">j</span><span class="p">]))</span>
+
+    <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">instances</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">churns</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">entropy</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">deltas</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">pchu</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_pchu_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">wpchu</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_wpchu_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">edpchu</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_edpchu_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">ldpchu</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_ldpchu_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">lgdpchu</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_lgdpchu_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+            <span class="n">hh</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_hh_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">hwh</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_hwh_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">edhh</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_edhh_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">ldhh</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_ldhh_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+            <span class="n">lgdhh</span> <span class="o">=</span> <span class="s1">&#39;DAMBROS_lgdhh_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="p">)</span>
+
+            <span class="n">churns</span><span class="p">[</span><span class="n">pchu</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">churns</span><span class="p">[</span><span class="n">wpchu</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">churns</span><span class="p">[</span><span class="n">edpchu</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">churns</span><span class="p">[</span><span class="n">ldpchu</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">churns</span><span class="p">[</span><span class="n">lgdpchu</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="n">entropy</span><span class="p">[</span><span class="n">hh</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">entropy</span><span class="p">[</span><span class="n">hwh</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">entropy</span><span class="p">[</span><span class="n">edhh</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">entropy</span><span class="p">[</span><span class="n">ldhh</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">entropy</span><span class="p">[</span><span class="n">lgdhh</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="k">if</span> <span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">deltas</span><span class="p">[</span><span class="n">m</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Could not find file: </span><span class="si">{}</span><span class="s1"> in deltas!&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
+
+            <span class="n">C</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">deltas</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">file</span><span class="p">])</span>  <span class="c1"># number of columns of the matrix (timesteps)</span>
+
+            <span class="c1"># churn of source code metrics</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">deltas</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">file</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">absval</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                    <span class="n">pos</span> <span class="o">=</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span>
+                    <span class="n">churns</span><span class="p">[</span><span class="n">pchu</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">absval</span><span class="p">)</span>
+                    <span class="n">churns</span><span class="p">[</span><span class="n">wpchu</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">absval</span><span class="p">)</span>
+                    <span class="n">churns</span><span class="p">[</span><span class="n">edpchu</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">absval</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">phi1</span> <span class="o">*</span> <span class="p">(</span><span class="n">C</span> <span class="o">-</span> <span class="n">pos</span><span class="p">))))</span>
+                    <span class="n">churns</span><span class="p">[</span><span class="n">ldpchu</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">absval</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">phi2</span> <span class="o">*</span> <span class="p">(</span><span class="n">C</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">pos</span><span class="p">)))</span>
+                    <span class="n">churns</span><span class="p">[</span><span class="n">lgdpchu</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="mi">1</span> <span class="o">+</span> <span class="n">alpha</span> <span class="o">*</span> <span class="n">absval</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">phi3</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">C</span> <span class="o">+</span> <span class="mf">1.01</span> <span class="o">-</span> <span class="n">pos</span><span class="p">)))</span>
+
+            <span class="c1"># entropy of source code metrics</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">deltas</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">file</span><span class="p">]):</span>
+                <span class="k">if</span> <span class="n">value</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">value</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">pos</span> <span class="o">=</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span>
+                    <span class="n">p</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">/</span> <span class="nb">sum</span><span class="p">(</span><span class="n">sum_rows</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+                    <span class="n">sum_j</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">entropy_h</span><span class="p">[</span><span class="n">m</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+                    <span class="n">entropy</span><span class="p">[</span><span class="n">hh</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sum_j</span><span class="p">)</span>
+                    <span class="n">entropy</span><span class="p">[</span><span class="n">hwh</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span> <span class="o">*</span> <span class="n">sum_j</span><span class="p">)</span>
+                    <span class="n">entropy</span><span class="p">[</span><span class="n">edhh</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sum_j</span> <span class="o">/</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">phi1</span> <span class="o">*</span> <span class="p">(</span><span class="n">C</span> <span class="o">-</span> <span class="n">pos</span><span class="p">))))</span>
+                    <span class="n">entropy</span><span class="p">[</span><span class="n">ldhh</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sum_j</span> <span class="o">/</span> <span class="p">(</span><span class="n">phi2</span> <span class="o">*</span> <span class="p">(</span><span class="n">C</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">pos</span><span class="p">)))</span>
+                    <span class="n">entropy</span><span class="p">[</span><span class="n">lgdhh</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sum_j</span> <span class="o">/</span> <span class="p">(</span><span class="n">phi3</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">C</span> <span class="o">+</span> <span class="mf">1.01</span> <span class="o">-</span> <span class="n">pos</span><span class="p">)))</span>
+
+        <span class="c1"># sum up everything and report back</span>
+        <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">msum</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">churns</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        <span class="n">rel</span><span class="p">[</span><span class="n">file</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">msum</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">entropy</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+
+    <span class="k">return</span> <span class="n">rel</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Alexander Trautsch
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

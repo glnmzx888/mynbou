@@ -1,0 +1,498 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>API Documentation &mdash; mynbou 0.0.1 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Intro" href="intro.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> mynbou
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="intro.html">Intro</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-core">core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-path">path</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-metrics.change">metrics.change</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-aggregation">aggregation</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mynbou</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>API Documentation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/api.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="api-documentation">
+<h1>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h1>
+<p><em>mynbou</em> provides a path module which contains <a class="reference internal" href="#path.OntdekBaan" title="path.OntdekBaan"><code class="xref any py py-class docutils literal notranslate"><span class="pre">OntdekBaan</span></code></a> which finds every possible path from one node in either direction of the graph via Breadth First Search (BFS) with a configurable breakoff function.
+It also contains <a class="reference internal" href="#path.Volg" title="path.Volg"><code class="xref any py py-class docutils literal notranslate"><span class="pre">Volg</span></code></a> allows following these paths and tracking file renaming and aggregating change information that can then be used to calculate change metrics.</p>
+<div class="section" id="module-core">
+<span id="core"></span><h2>core<a class="headerlink" href="#module-core" title="Permalink to this headline">¶</a></h2>
+<p>This module provides Mynbou class which wraps Volg, change metrics and static source code metrics for the release.</p>
+<dl class="class">
+<dt id="core.Mynbou">
+<em class="property">class </em><code class="sig-prename descclassname">core.</code><code class="sig-name descname">Mynbou</code><span class="sig-paren">(</span><em class="sig-param">vcs</em>, <em class="sig-param">project_name</em>, <em class="sig-param">release_hash</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#Mynbou"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#core.Mynbou" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core Mynbou functionality.</p>
+<p>This class wraps graph construction, Volg, the change metrics implementations and metrics collection.</p>
+<dl class="method">
+<dt id="core.Mynbou.load_graph">
+<code class="sig-name descname">load_graph</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#Mynbou.load_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#core.Mynbou.load_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load NetworkX digraph structure from commits of this VCS.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="core.Mynbou.release">
+<code class="sig-name descname">release</code><span class="sig-paren">(</span><em class="sig-param">limit_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/core.html#Mynbou.release"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#core.Mynbou.release" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide a full release for the project and release hash Mynbou was initialized with.</p>
+<p>This provides every change metric, release metrics and bug fixes.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-path">
+<span id="path"></span><h2>path<a class="headerlink" href="#module-path" title="Permalink to this headline">¶</a></h2>
+<p>This module contains the main pathing classes of mynbou.</p>
+<p>OntdekBaan which discovers every path on a DAG from one node until it reaches a break condition or all nodes are visited.
+Volg which traverses backwards from the selected release to collect change metrics</p>
+<dl class="class">
+<dt id="path.OntdekBaan">
+<em class="property">class </em><code class="sig-prename descclassname">path.</code><code class="sig-name descname">OntdekBaan</code><span class="sig-paren">(</span><em class="sig-param">g</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#OntdekBaan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.OntdekBaan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple variant of OntdekBaan which yields the paths via bfs until a break condition is hit or no unvisited nodes remain.</p>
+<dl class="method">
+<dt id="path.OntdekBaan.all_paths">
+<code class="sig-name descname">all_paths</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#OntdekBaan.all_paths"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.OntdekBaan.all_paths" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator that yields all possible paths fomr the given start node and the direction.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="path.OntdekBaan.set_path">
+<code class="sig-name descname">set_path</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">direction='backward'</em>, <em class="sig-param">break_condition=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#OntdekBaan.set_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.OntdekBaan.set_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set start node and travel direction for the BFS.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="path.Volg">
+<em class="property">class </em><code class="sig-prename descclassname">path.</code><code class="sig-name descname">Volg</code><span class="sig-paren">(</span><em class="sig-param">graph</em>, <em class="sig-param">vcs</em>, <em class="sig-param">target_release_hash</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#Volg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.Volg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Volg follows file renaming within git.</p>
+<p>It takes a target release and tracks the files contained in the target release backwards.
+If we encounter a rename we add the old name of the file to the aliases of the filename we know, this allows us to keep track of these files.
+If we encounter a copy operation we do not add the old name of the file to the aliases because that file contiues to exist and we would then mix them up.</p>
+<dl class="method">
+<dt id="path.Volg.calc_current_files">
+<code class="sig-name descname">calc_current_files</code><span class="sig-paren">(</span><em class="sig-param">commit</em>, <em class="sig-param">release_commit</em>, <em class="sig-param">commit_graph</em>, <em class="sig-param">undirected_graph</em>, <em class="sig-param">rename_cache</em>, <em class="sig-param">current_files</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#Volg.calc_current_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.Volg.calc_current_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>determines the java files changed by a commit and returns them as a set</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="path.Volg.change_metrics">
+<code class="sig-name descname">change_metrics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#Volg.change_metrics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.Volg.change_metrics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change path metric calculation.</p>
+<p>Uses the change paths which uses a cutoff time.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="path.Volg.dambros_deltas">
+<code class="sig-name descname">dambros_deltas</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#Volg.dambros_deltas"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.Volg.dambros_deltas" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create the dambros delta matrix of our collected metrics.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="path.Volg.first_occured">
+<code class="sig-name descname">first_occured</code><span class="sig-paren">(</span><em class="sig-param">vcs</em>, <em class="sig-param">paths</em>, <em class="sig-param">release_files</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#Volg.first_occured"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.Volg.first_occured" title="Permalink to this definition">¶</a></dt>
+<dd><p>Traverse all FileActions of all paths to find when which file was added.</p>
+<p>Follows subsequent renames. We collect aliases for files because we need to know
+which names point to a file contained in the release.
+We do this by having key, value pairs of alias -&gt; release file.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="path.Volg.issues">
+<code class="sig-name descname">issues</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#Volg.issues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.Volg.issues" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load inducing file actions for labeling files accordingly.</p>
+<p>For all bug-fixing commits that happened after our chosen release:
+find bug-inducing commits via induced of FileAction</p>
+<ul class="simple">
+<li><p>uses commit label: validated_bugfix</p></li>
+<li><p>uses issues from: fixed_issue_ids (manually validated links from commit to issue)</p></li>
+<li><p>uses inducing label: JLMIV+ (Jira Links Manual(JLM), Issue Validation(IV), only java files(+), skip comments and empty spaces in blame(+))</p></li>
+</ul>
+<p>ALL inducing commits of ALL bug fixing commits MUST have a path to the release.
+The only exceptions are partial fixes when the inducing commit without a path to the release is a bug fixing commit for the same issue.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="path.Volg.issues_six_months_szz">
+<code class="sig-name descname">issues_six_months_szz</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#Volg.issues_six_months_szz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.Volg.issues_six_months_szz" title="Permalink to this definition">¶</a></dt>
+<dd><p>basically looks six months into the future from the release and counts the defects that we can match</p>
+<p>returns a dict, {filename: [list of issues]}</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="path.Volg.issues_six_months_szzr">
+<code class="sig-name descname">issues_six_months_szzr</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/path.html#Volg.issues_six_months_szzr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#path.Volg.issues_six_months_szzr" title="Permalink to this definition">¶</a></dt>
+<dd><p>basically looks six months into the future from the release and counts the defects that we can match</p>
+<p>returns a dict, {filename: [list of issues]}</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-metrics.change">
+<span id="metrics-change"></span><h2>metrics.change<a class="headerlink" href="#module-metrics.change" title="Permalink to this headline">¶</a></h2>
+<p>This module contains functions for calculation of change metrics.</p>
+<p>For now this contains change metrics as as proposed by Moser et al. <a class="bibtex reference internal" href="intro.html#moser" id="id1">[MPS08]</a>, Hassan <a class="bibtex reference internal" href="intro.html#hassan" id="id2">[Has09]</a> and the extensions proposed by D’Ambros et al. <a class="bibtex reference internal" href="intro.html#dambros" id="id3">[DAmbrosLR12]</a>.</p>
+<dl class="function">
+<dt id="metrics.change.dambros">
+<code class="sig-prename descclassname">metrics.change.</code><code class="sig-name descname">dambros</code><span class="sig-paren">(</span><em class="sig-param">instances</em>, <em class="sig-param">deltas</em>, <em class="sig-param">alpha=0.01</em>, <em class="sig-param">phi1=1</em>, <em class="sig-param">phi2=1</em>, <em class="sig-param">phi3=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/metrics/change.html#dambros"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#metrics.change.dambros" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate D’Ambros et al. churn of source code metrics and entropy of source code metrics.</p>
+<p>In contrast to D’Ambros et al. who used multiple delta matrices we are using just one with an additional dimension of filepath.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instances</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – dict with structure {‘filepath’: {‘metric1’: [1,2], …}}. Only the filepath as key is needed here.</p></li>
+<li><p><strong>deltas</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – dict with structure {‘metric1’: {‘filepath’: [deltavalue1, deltavalue2, …]}}</p></li>
+<li><p><strong>phi1</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – decay factor</p></li>
+<li><p><strong>phi2</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – decay factor</p></li>
+<li><p><strong>phi3</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – decay factor</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dict with key filepath and values change metrics</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="metrics.change.hassan">
+<code class="sig-prename descclassname">metrics.change.</code><code class="sig-name descname">hassan</code><span class="sig-paren">(</span><em class="sig-param">instances</em>, <em class="sig-param">window_size_days=14</em>, <em class="sig-param">phi1=1</em>, <em class="sig-param">phi2=1</em>, <em class="sig-param">phi3=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/metrics/change.html#hassan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#metrics.change.hassan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate Hassan complexity of change metrics with the additon from D’Ambros.</p>
+<p>The addition includes not only if the file has changed
+but also the number of lines (added + deleted).
+Requires the following lists in the dict: lines_added, lines_deleted, days_from_release (list of days before release where the file changed).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instances</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – dict with structure {‘filepath’: {‘lines_added’: [1,2], …}}.</p></li>
+<li><p><strong>window_size_days</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – window size in days</p></li>
+<li><p><strong>phi1</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – decay factor</p></li>
+<li><p><strong>phi2</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – decay factor</p></li>
+<li><p><strong>phi3</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – decay factor</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dict with key filepath and values change metrics</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="metrics.change.moser">
+<code class="sig-prename descclassname">metrics.change.</code><code class="sig-name descname">moser</code><span class="sig-paren">(</span><em class="sig-param">instances</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/metrics/change.html#moser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#metrics.change.moser" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate change metrics after Moser et al.</p>
+<p>Requires the following lists in the dict: authors, revisions, lines_added, lines_deleted, changesets, commit_messages, ages (list of days after start where the file changed).</p>
+<p>Requires the following additional fields in the dict: age (date from the end of metrics selection to the first appearance of the file in days)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>instances</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – dict with structure {‘filepath’: {‘lines_added’: [1,2], …}}.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dict with key filepath and values change metrics</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-aggregation">
+<span id="aggregation"></span><h2>aggregation<a class="headerlink" href="#module-aggregation" title="Permalink to this headline">¶</a></h2>
+<p>This module contains functions for calculation of aggregations for lists of values.</p>
+<p>The calculations here are verbatim taken from Zhang et al. <a class="bibtex reference internal" href="intro.html#zhang" id="id4">[ZHMZ17]</a>.</p>
+<dl class="function">
+<dt id="aggregation.atkinson">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">atkinson</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#atkinson"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.atkinson" title="Permalink to this definition">¶</a></dt>
+<dd><p>Atkinson index of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\text{Atkinson}_m = 1 - \frac{1}{\mu_m}(\frac{1}{N}\sum_{i=1}^N\sqrt{m_i})^2\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.cov">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">cov</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#cov"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.cov" title="Permalink to this definition">¶</a></dt>
+<dd><p>Coefficient of variation of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\text{Cov}_m = \frac{\sigma_m}{\mu_m}\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.generalized_entropy">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">generalized_entropy</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#generalized_entropy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.generalized_entropy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generalized entropy of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\text{GE}_m = -\frac{1}{N\alpha (1-\alpha)}\sum_{i=1}^N\lbrack(\frac{m_i}{\mu_m})^\alpha - 1\rbrack, \alpha=0.5\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.gini">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">gini</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#gini"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.gini" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gini index of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\text{Gini}_m = \frac{2}{N\textstyle \sum_m}\lbrack\sum_{i=1}^N(m_i * i) - (N + 1)\textstyle \sum_m\rbrack\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.hoover">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">hoover</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#hoover"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.hoover" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hoover index of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\text{Hoover}_m = \frac{1}{2}\sum_{i=i}^N|\frac{m_i}{\textstyle \sum_m} - \frac{1}{N}|\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.mean">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">mean</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#mean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.mean" title="Permalink to this definition">¶</a></dt>
+<dd><p>Arithmetic mean value of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\mu_m = \frac{1}{N}\sum_{i=1}^N m_i\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.median">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">median</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#median"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.median" title="Permalink to this definition">¶</a></dt>
+<dd><p>Median of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}M_m = \begin{cases}
+        m_{\frac{n+1}{2}} &amp; \text{if}~N~\text{is odd}\\
+        \frac{1}{2}(m_{\frac{n}{2}} + m_{\frac{n+2}{2}}) &amp; \text{otherwise}.
+      \end{cases}\end{split}\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.msum">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">msum</code><span class="sig-paren">(</span><em class="sig-param">iterable</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#msum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.msum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Full precision summation using multiple floats for intermediate values.</p>
+<p>Rounded x+y stored in hi with the round-off stored in lo.  Together
+hi+lo are exactly equal to x+y.  The inner loop applies hi/lo summation
+to each partial so that the list of partial sums remains exact.
+Depends on IEEE-754 arithmetic guarantees.  See proof of correctness
+<a class="reference external" href="http://www-2.cs.cmu.edu/afs/cs/project/quake/public/papers/robust-arithmetic.ps">here</a></p>
+<p><a class="reference external" href="http://code.activestate.com/recipes/393090/">recipe source</a></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.shannon_entropy">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">shannon_entropy</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#shannon_entropy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.shannon_entropy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shannon’s entropy of the given values.</p>
+<div class="math notranslate nohighlight">
+\[E_m = -\frac{1}{N}\sum_{i=1}^N\lbrack\frac{freq(m_i)}{N} * \ln\frac{freq(m_i)}{N}\rbrack\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.stddev">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">stddev</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#stddev"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.stddev" title="Permalink to this definition">¶</a></dt>
+<dd><p>Standard deviation of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\sigma_m = \sqrt{\frac{1}{N}\sum_{i=1}^N(m_i - \mu_m)^2}\]</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="aggregation.theil">
+<code class="sig-prename descclassname">aggregation.</code><code class="sig-name descname">theil</code><span class="sig-paren">(</span><em class="sig-param">values</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/aggregation.html#theil"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#aggregation.theil" title="Permalink to this definition">¶</a></dt>
+<dd><p>Theil index of the given values.</p>
+<div class="math notranslate nohighlight">
+\[\text{Theil}_m = \frac{1}{N} \sum_{i=1}^N \lbrack \frac{m_i}{\mu_m} * \ln(\frac{m_i}{\mu_m})\rbrack\]</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="intro.html" class="btn btn-neutral float-left" title="Intro" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Alexander Trautsch
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
